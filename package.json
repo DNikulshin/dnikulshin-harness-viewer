@@ -36,6 +36,8 @@
     "harness-viewer": "./src/cli.mjs"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "repo:rules": "node tooling/repo-rules.mjs --protect",
+    "repo:rules:dry": "node tooling/repo-rules.mjs --protect --dry-run"
   }
 }

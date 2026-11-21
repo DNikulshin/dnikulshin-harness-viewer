@@ -35,6 +35,9 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
 
 ## Установка и запуск
 
+> Пакет ещё не опубликован в npm: публикация и защита тега — issue #3. До релиза запуск из
+> репозитория: `node src/cli.mjs render --out viewer.html` (те же флаги).
+
 ```bash
 npx @dnikulshin/harness-viewer render --out viewer.html
 npx @dnikulshin/harness-viewer render --root ~/projects/acme --out /tmp/acme-cycles.html
@@ -79,10 +82,32 @@ npx @dnikulshin/harness-viewer render --artifacts .pi/artifacts --out viewer.htm
 - **Манифесты и отчёты агентов** — размеры пакета по итерациям и наличие `review.<n>.md` /
   `evaluation.<n>.md` (markdown не рендерится: разбор — работа ядра).
 
+## Правила репозитория
+
+Те же, что в ядре (`dev-harness`), и они воспроизводимы командой, а не кликами в UI:
+
+```bash
+node tooling/repo-rules.mjs --dry-run   # показать, что будет применено
+node tooling/repo-rules.mjs --protect   # применить: режим merge, защита main, правила тегов
+```
+
+| Правило                | Что означает                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
+| squash-only merge      | в `main` попадает один коммит, история линейная; merge commit и rebase отключены                  |
+| PR обязателен всем     | `enforce_admins` — правило действует и на владельца; ветка удаляется после merge                  |
+| обязательные проверки  | `test (ubuntu-latest)` и `test (macos-latest)`, PR должен быть актуален относительно `main`       |
+| линейная история       | merge-коммит, появившийся в обход настроек, не пройдёт                                            |
+| без force-push         | переписать `main` нельзя; удаление ветки `main` запрещено                                          |
+| теги `v*` защищены     | ruleset `release-tags`: тег нельзя удалить или перезаписать — по нему ставится пакет              |
+| сканирование секретов  | включено вместе с блокировкой push, если ещё не было                                              |
+
+Проверка правил — `test/repo-rules.test.mjs` (`node --test`): payload правил и идемпотентность
+применения проверяются на подменённом `gh`, сеть не используется.
+
 ## Разработка
 
 ```bash
-node --test        # тесты на фикстуре из двух циклов
+node --test        # тесты на фикстуре из двух циклов + правила репозитория
 ```
 
 Фикстура — `test/fixtures/artifacts/`: два цикла (`example-alpha` с эскалацией по бюджету,
