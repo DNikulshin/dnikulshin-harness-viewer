@@ -1,0 +1,6 @@
+diff --git a/src/example.mjs b/src/example.mjs
+--- a/src/example.mjs
++++ b/src/example.mjs
+@@ -1,2 +1,2 @@
+-export const answer = 41;
++export const answer = 42;

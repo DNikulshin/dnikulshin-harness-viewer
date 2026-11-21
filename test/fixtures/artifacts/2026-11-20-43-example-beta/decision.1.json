@@ -1,0 +1,12 @@
+{
+  "iteration": 1,
+  "action": "REWORK",
+  "retry_stage": null,
+  "acquire": [],
+  "reasons": ["gate:format_check: fail"],
+  "rework_items": ["Отформатировать изменённые файлы"],
+  "unverified": [],
+  "downgraded": [],
+  "counts": { "blockers": 0, "major": 0, "minor": 0, "followups": 0, "partial_criteria": 0, "verdict_without_evidence": 0 },
+  "unresolved_refs": 0
+}

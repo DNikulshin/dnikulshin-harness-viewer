@@ -1,0 +1,35 @@
+name: CI
+
+# Просмотрщик читает файлы ядра и не имеет зависимостей: единственное, что нужно проверить —
+# тесты на двух ОС и версия Node из `.nvmrc` (`engines.node` = >=26.13 <27).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # Зависимостей нет, `npm install` не нужен: тесты — `node --test`.
+      # Среди них — контрактные проверки: `dependencies` пусты, рантайма агента нет,
+      # ядро не импортируется.
+      - name: Тесты
+        run: node --test

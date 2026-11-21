@@ -1,0 +1,41 @@
+{
+  "name": "@dnikulshin/harness-viewer",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Read-only просмотрщик артефактов @dnikulshin/harness: список циклов, состояние, причина остановки, гейты, evidence, решения",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=26.13 <27"
+  },
+  "os": [
+    "linux",
+    "darwin"
+  ],
+  "keywords": [
+    "harness",
+    "artifacts",
+    "viewer",
+    "read-only",
+    "static-html",
+    "code-review"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DNikulshin/dnikulshin-harness-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DNikulshin/dnikulshin-harness-viewer/issues"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "harness-viewer": "./src/cli.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

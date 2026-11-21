@@ -1,0 +1,11 @@
+{
+  "iteration": 1,
+  "base_sha": "0123456789abcdef0123456789abcdef01234567",
+  "head": "89abcdef0123456789abcdef0123456789abcdef",
+  "started_at": "2026-11-20T09:10:00Z",
+  "gates": [
+    { "id": "test", "cmd": "pnpm test", "required": true, "status": "pass", "exit": 0, "duration_s": 12.5, "log": "gates/test.1.log", "reason": null },
+    { "id": "typecheck", "cmd": "pnpm typecheck", "required": true, "status": "fail", "exit": 2, "duration_s": 4.2, "log": "gates/typecheck.1.log", "reason": null },
+    { "id": "test_int", "cmd": "pnpm test:int", "required": false, "status": "not_run", "exit": null, "duration_s": 0.2, "log": null, "reason": "no_database" }
+  ]
+}
