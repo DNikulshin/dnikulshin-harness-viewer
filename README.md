@@ -35,6 +35,9 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
 
 ## Установка и запуск
 
+> Пакет ещё не опубликован в npm: публикация и защита тега — issue #3. До релиза запуск из
+> репозитория: `node src/cli.mjs render --out viewer.html` (те же флаги).
+
 ```bash
 npx @dnikulshin/harness-viewer render --out viewer.html
 npx @dnikulshin/harness-viewer render --root ~/projects/acme --out /tmp/acme-cycles.html
