@@ -37,7 +37,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "release:pack": "mkdir -p dist && npm pack --pack-destination dist",
+    "release:pack": "rm -rf dist && mkdir -p dist && npm pack --pack-destination dist",
     "release:check": "node tooling/check-package.mjs",
     "repo:rules": "node tooling/repo-rules.mjs --protect",
     "repo:rules:dry": "node tooling/repo-rules.mjs --protect --dry-run"
