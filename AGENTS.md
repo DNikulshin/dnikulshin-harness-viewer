@@ -29,6 +29,9 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
 | `src/cli.mjs`            | аргументы, атомарная запись страницы, коды выхода                    |
 | `src/direct-run.mjs`     | «запущен как CLI, а не импортирован»                                 |
 | `tooling/repo-rules.mjs` | правила репозитория: squash-only, защита `main`, ruleset тегов       |
+| `tooling/package-contract.mjs` | контракт архива: обязательные и запрещённые записи, покрытие `files`, обещания `bin` |
+| `tooling/check-package.mjs` | релизный гейт: `npm pack` архив против контракта и тега (код `1` останавливает публикацию) |
+| `.github/workflows/release.yml` | публикация по тегу `v*`: тег на `main` → тесты → `npm pack` → проверка состава → `npm publish` |
 | `test/`                  | `node --test`: страница, read-only, битые артефакты, контракт, правила |
 
 ## Команды
@@ -40,6 +43,8 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
 | `node src/cli.mjs render --root <проект> --out /tmp/v.html` | то же по конкретному проекту        |
 | `node tooling/repo-rules.mjs --dry-run`    | показать, какие правила будут применены к репозиторию           |
 | `node tooling/repo-rules.mjs --protect`    | применить правила (нужны admin-права `gh`)                      |
+| `npm run release:pack`                     | собрать архив в `dist/` (то же делает `release.yml`)            |
+| `node tooling/check-package.mjs dist/*.tgz --tag vX.Y.Z` | проверить архив перед публикацией               |
 
 ## Правила
 
@@ -61,7 +66,10 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
    проверки — `test (ubuntu-latest)` и `test (macos-latest)`. Правила воспроизводятся
    `node tooling/repo-rules.mjs --protect`.
 7. **Тег `vX.Y.Z` — контракт установки.** Ruleset `release-tags` запрещает удаление и перезапись:
-   ошибочный тег лечится новым тегом, а не `push --force`. Публикация пакета — отдельная задача.
+   ошибочный тег лечится новым тегом, а не `push --force`. Публикация — workflow `release.yml` по
+   тегу после зелёного CI на `main`; публикуется собранный архив, и только после проверки состава
+   (`tooling/check-package.mjs`). Порядок и что проверяется — README, раздел «Релиз».
+   Секрет `NPM_TOKEN` и установка тега — действия владельца: агент готовит PR и команду.
 
 ## Границы действий агента
 
