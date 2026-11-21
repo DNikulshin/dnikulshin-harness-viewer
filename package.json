@@ -1,6 +1,6 @@
 {
   "name": "@dnikulshin/harness-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Read-only просмотрщик артефактов @dnikulshin/harness: список циклов, состояние, причина остановки, гейты, evidence, решения",
   "license": "MIT",
