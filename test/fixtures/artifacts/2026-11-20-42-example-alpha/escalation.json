@@ -1,0 +1,6 @@
+{
+  "reason": "budget",
+  "detail": "расход выше потолка: 191.47 ₽ > 30 ₽",
+  "draft_pr_allowed": false,
+  "open_items": ["снизить расход или поднять потолок"]
+}

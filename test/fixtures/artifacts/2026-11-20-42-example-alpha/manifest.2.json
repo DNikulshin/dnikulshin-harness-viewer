@@ -1,0 +1,9 @@
+{
+  "iteration": 2,
+  "base_sha": "0123456789abcdef0123456789abcdef01234567",
+  "files": [
+    { "path": "evidence/criteria.md", "bytes": 120, "lines": 6 },
+    { "path": "evidence/diff.patch", "bytes": 240, "lines": 9 }
+  ],
+  "totals": { "files": 2, "bytes": 360, "lines": 15 }
+}

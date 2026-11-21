@@ -1,0 +1,9 @@
+{
+  "iteration": 1,
+  "base_sha": "abcdef0123456789abcdef0123456789abcdef01",
+  "head": "89abcdef0123456789abcdef0123456789abcdef",
+  "started_at": "2026-11-20T10:35:00Z",
+  "gates": [
+    { "id": "format_check", "cmd": "pnpm exec prettier --check .", "required": true, "status": "fail", "exit": 1, "duration_s": 2.1, "log": "gates/format_check.1.log", "reason": null }
+  ]
+}

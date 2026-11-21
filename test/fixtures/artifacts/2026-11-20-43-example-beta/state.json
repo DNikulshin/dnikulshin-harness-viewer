@@ -1,0 +1,20 @@
+{
+  "issue": 43,
+  "slug": "example-beta",
+  "branch": "fix/43-example-beta",
+  "base_sha": "abcdef0123456789abcdef0123456789abcdef01",
+  "iteration": 1,
+  "max_iterations": 2,
+  "stage": "REWORK",
+  "stage_status": "running",
+  "criteria_source": "issue",
+  "retries": { "REVIEW": 0, "EVALUATE": 0, "evidence": 1 },
+  "owner_approved": false,
+  "models": { "plan": "vendor/plan-model", "code": "vendor/code-model", "review": "vendor/review-model" },
+  "history": [
+    { "stage": "REWORK", "iteration": 1, "started_at": "2026-11-20T11:00:00Z", "finished_at": null, "status": "running" }
+  ],
+  "escalation": null,
+  "started_at": "2026-11-20T10:30:00Z",
+  "updated_at": "2026-11-20T11:00:00Z"
+}

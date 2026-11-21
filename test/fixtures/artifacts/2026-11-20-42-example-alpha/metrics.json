@@ -1,0 +1,7 @@
+{
+  "iterations": 2,
+  "cost_rub": 191.47,
+  "cycle_duration_s": 4800,
+  "gate_total_s": 29.9,
+  "context": { "evidence_bytes": 12345, "evidence_lines": 340, "cache_share": 0.42 }
+}

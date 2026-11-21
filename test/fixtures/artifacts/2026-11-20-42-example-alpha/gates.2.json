@@ -1,0 +1,9 @@
+{
+  "iteration": 2,
+  "base_sha": "0123456789abcdef0123456789abcdef01234567",
+  "head": "89abcdef0123456789abcdef0123456789abcdef",
+  "started_at": "2026-11-20T10:00:00Z",
+  "gates": [
+    { "id": "test", "cmd": "pnpm test", "required": true, "status": "pass", "exit": 0, "duration_s": 13.0, "log": "gates/test.2.log", "reason": null }
+  ]
+}

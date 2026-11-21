@@ -1,0 +1,24 @@
+{
+  "issue": 42,
+  "slug": "example-alpha",
+  "branch": "feat/42-example-alpha",
+  "base_sha": "0123456789abcdef0123456789abcdef01234567",
+  "iteration": 2,
+  "max_iterations": 2,
+  "stage": "ESCALATED",
+  "stage_status": "error",
+  "criteria_source": "issue",
+  "criteria_sha256": null,
+  "retries": { "REVIEW": 0, "EVALUATE": 0, "evidence": 0 },
+  "owner_approved": false,
+  "models": { "plan": "vendor/plan-model", "code": "vendor/code-model", "review": "vendor/review-model" },
+  "history": [
+    { "stage": "INIT", "iteration": 1, "started_at": "2026-11-20T09:00:00Z", "finished_at": "2026-11-20T09:01:00Z", "status": "done" },
+    { "stage": "CODE", "iteration": 2, "started_at": "2026-11-20T10:00:00Z", "finished_at": "2026-11-20T10:20:00Z", "status": "done" },
+    { "stage": "ESCALATED", "iteration": 2, "started_at": "2026-11-20T10:20:00Z", "finished_at": null, "status": "error", "detail": "budget" }
+  ],
+  "escalation": { "reason": "budget", "detail": "расход выше потолка", "draft_pr_allowed": false },
+  "applied_decision": null,
+  "started_at": "2026-11-20T09:00:00Z",
+  "updated_at": "2026-11-20T10:20:00Z"
+}
