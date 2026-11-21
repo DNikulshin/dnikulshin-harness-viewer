@@ -101,7 +101,7 @@ describe('применение правил', () => {
     });
 
     const result = setup({ run, repo: 'acme/viewer' });
-    assert.deepEqual(result, { merge: true, protected: false, tagRuleset: '' });
+    assert.deepEqual(result, { merge: true, protected: false, tagRuleset: '', limitation: '' });
     // Первый вызов — чтение текущих настроек безопасности, второй — запись режима merge.
     assert.deepEqual(calls[0]?.args, ['api', 'repos/acme/viewer']);
     const patch = calls[1];
@@ -117,7 +117,7 @@ describe('применение правил', () => {
     });
 
     const result = setup({ run, repo: 'acme/viewer', protect: true });
-    assert.deepEqual(result, { merge: true, protected: true, tagRuleset: TAG_RULESET });
+    assert.deepEqual(result, { merge: true, protected: true, tagRuleset: TAG_RULESET, limitation: '' });
 
     const protection = calls.find((call) => call.args.some((arg) => arg.endsWith('/protection')));
     assert.ok(protection !== undefined);
@@ -171,6 +171,56 @@ describe('применение правил', () => {
     assert.equal(calls.length, 0);
     assert.ok(lines.some((line) => line.includes('(dry-run) gh api -X PUT')));
     assert.ok(lines.some((line) => line.includes('(dry-run) gh api -X POST')));
+  });
+});
+
+describe('ограничения плана', () => {
+  test('недоступное сканирование секретов не мешает режиму merge', () => {
+    let patches = 0;
+    /** @type {string[]} */
+    const bodies = [];
+    const run = (args, options = {}) => {
+      const path = args[1] === '-X' ? args[3] : args[1];
+      if (args[0] !== 'api') return '';
+      if (args.includes('PATCH')) {
+        patches += 1;
+        bodies.push(options.input ?? '');
+        if (patches === 1) {
+          throw new Error('gh: Secret scanning is not available for this repository. (HTTP 422)');
+        }
+        return '{}';
+      }
+      return path === 'repos/acme/viewer' ? '{}' : '{}';
+    };
+
+    const lines = [];
+    const result = setup({ run, repo: 'acme/viewer', log: (line) => lines.push(line) });
+    assert.equal(patches, 2, 'второй PATCH — без настроек безопасности');
+    assert.equal('security_and_analysis' in JSON.parse(bodies[1] ?? '{}'), false);
+    assert.deepEqual(JSON.parse(bodies[1] ?? '{}'), MERGE_SETTINGS);
+    assert.deepEqual(result, { merge: true, protected: false, tagRuleset: '', limitation: '' });
+    assert.ok(lines.some((line) => line.includes('недоступны на этом плане')));
+  });
+
+  test('приватный репозиторий без Pro: merge применён, защита — нет, код 2', () => {
+    const run = (args) => {
+      if (args[0] !== 'api') return '';
+      if (args.includes('PATCH')) return '{}';
+      if (args.includes('GET') || args[1] === 'repos/acme/viewer') return '{}';
+      throw new Error(
+        'gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)',
+      );
+    };
+    const errors = [];
+    const code = main({
+      argv: ['--repo', 'acme/viewer', '--protect'],
+      run,
+      stderr: (line) => errors.push(line),
+      log: () => {},
+    });
+
+    assert.equal(code, 2);
+    assert.match(errors.join('\n'), /нужен публичный репозиторий/u);
   });
 });
 

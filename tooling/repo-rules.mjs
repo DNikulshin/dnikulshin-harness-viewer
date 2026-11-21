@@ -112,6 +112,19 @@ export function securityPatch(repo) {
 }
 
 /**
+ * Отказ по плану или видимости: приватный репозиторий на бесплатном плане не получает ни защиты
+ * ветки, ни ruleset тегов, ни сканирования секретов. Сообщение GitHub — единственный честный
+ * признак: текст отличается между эндпоинтами, а смысл один.
+ * @param {string} message
+ * @returns {boolean}
+ */
+export function isPlanLimit(message) {
+  return /Upgrade to GitHub Pro|make this repository public|Secret scanning is not available/iu.test(
+    message,
+  );
+}
+
+/**
  * Применяет правила. Идемпотентно: те же значения перезаписываются теми же значениями.
  * @param {{
  *   run: RunGh,
@@ -147,47 +160,71 @@ export function setup({ run, repo, protect = false, dryRun = false, log = () => 
     }
     Object.assign(repoPatch, securityPatch(current));
   }
-  exec(['api', '-X', 'PATCH', `repos/${repo}`, '--input', '-'], {
-    input: JSON.stringify(repoPatch),
-  });
-  log(
-    'merge: только squash, ветка удаляется после мержа; ' +
-      `секреты: ${repoPatch.security_and_analysis === undefined ? 'уже включены' : 'сканирование и блокировка push включены'}`,
-  );
+  let securityNote =
+    repoPatch.security_and_analysis === undefined
+      ? 'уже включены'
+      : 'сканирование и блокировка push включены';
+  try {
+    exec(['api', '-X', 'PATCH', `repos/${repo}`, '--input', '-'], {
+      input: JSON.stringify(repoPatch),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Сканирование секретов недоступно на приватном бесплатном репозитории: режим merge при этом
+    // применить можно и нужно, поэтому повторяем PATCH без настроек безопасности.
+    if (repoPatch.security_and_analysis === undefined || !isPlanLimit(message)) throw error;
+    exec(['api', '-X', 'PATCH', `repos/${repo}`, '--input', '-'], {
+      input: JSON.stringify(MERGE_SETTINGS),
+    });
+    securityNote = 'недоступны на этом плане (нужен публичный репозиторий или GitHub Pro)';
+  }
+  log(`merge: только squash, ветка удаляется после мержа; секреты: ${securityNote}`);
 
   let protectedBranch = false;
   let tagRuleset = '';
+  let limitation = '';
   if (protect) {
-    exec(['api', '-X', 'PUT', `repos/${repo}/branches/main/protection`, '--input', '-'], {
-      input: JSON.stringify(protectionPayload()),
-    });
-    protectedBranch = true;
-    log(
-      `main: PR обязателен всем, обязательны проверки ${REQUIRED_CHECKS.join(', ')}, ` +
-        'линейная история, комментарии должны быть закрыты',
-    );
+    try {
+      exec(['api', '-X', 'PUT', `repos/${repo}/branches/main/protection`, '--input', '-'], {
+        input: JSON.stringify(protectionPayload()),
+      });
+      protectedBranch = true;
+      log(
+        `main: PR обязателен всем, обязательны проверки ${REQUIRED_CHECKS.join(', ')}, ` +
+          'линейная история, комментарии должны быть закрыты',
+      );
 
-    // Ruleset тегов: ищем по имени — есть, обновляем (PUT), нет, создаём (POST).
-    /** @type {any[]} */
-    let rulesets = [];
-    if (!dryRun) {
-      try {
-        const listed = JSON.parse(run(['api', `repos/${repo}/rulesets`]));
-        rulesets = Array.isArray(listed) ? listed : [];
-      } catch {
-        rulesets = [];
+      // Ruleset тегов: ищем по имени — есть, обновляем (PUT), нет, создаём (POST).
+      /** @type {any[]} */
+      let rulesets = [];
+      if (!dryRun) {
+        try {
+          const listed = JSON.parse(run(['api', `repos/${repo}/rulesets`]));
+          rulesets = Array.isArray(listed) ? listed : [];
+        } catch {
+          rulesets = [];
+        }
       }
+      const existing = rulesets.find((item) => item?.name === TAG_RULESET);
+      const rulesetPath = existing
+        ? `repos/${repo}/rulesets/${existing.id}`
+        : `repos/${repo}/rulesets`;
+      exec(['api', '-X', existing === undefined ? 'POST' : 'PUT', rulesetPath, '--input', '-'], {
+        input: JSON.stringify(tagRulesetPayload()),
+      });
+      tagRuleset = TAG_RULESET;
+      log(`теги: ${TAG_PATTERN} нельзя удалить или перезаписать (ruleset ${TAG_RULESET})`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isPlanLimit(message)) throw error;
+      limitation =
+        'защита ветки и правила тегов недоступны: приватный репозиторий на бесплатном плане — ' +
+        'нужен публичный репозиторий (как dev-harness) или GitHub Pro';
+      log(`! ${limitation}`);
     }
-    const existing = rulesets.find((item) => item?.name === TAG_RULESET);
-    const rulesetPath = existing ? `repos/${repo}/rulesets/${existing.id}` : `repos/${repo}/rulesets`;
-    exec(['api', '-X', existing === undefined ? 'POST' : 'PUT', rulesetPath, '--input', '-'], {
-      input: JSON.stringify(tagRulesetPayload()),
-    });
-    tagRuleset = TAG_RULESET;
-    log(`теги: ${TAG_PATTERN} нельзя удалить или перезаписать (ruleset ${TAG_RULESET})`);
   }
 
-  return { merge: true, protected: protectedBranch, tagRuleset };
+  return { merge: true, protected: protectedBranch, tagRuleset, limitation };
 }
 
 /**
@@ -272,13 +309,18 @@ export function main({ argv = process.argv.slice(2), run = ghRun, log = console.
   }
 
   try {
-    setup({
+    const result = setup({
       run,
       repo,
       protect: options.protect,
       dryRun: options.dryRun,
       log,
     });
+    if (result.limitation !== '') {
+      // Режим merge применён, но правила ветки — нет: «настроено» было бы ложью.
+      stderr(`repo-rules: ${result.limitation}`);
+      return 2;
+    }
     log(`repo-rules: ${repo} настроен${options.protect ? ' с защитой main' : ''}`);
     return 0;
   } catch (error) {
