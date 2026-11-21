@@ -3,3 +3,4 @@ coverage/
 dist/
 *.log
 *.html
+package-lock.json

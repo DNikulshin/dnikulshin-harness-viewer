@@ -35,10 +35,9 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
 
 ## Установка и запуск
 
-Пакет ставится из npm по тегу `vX.Y.Z`: версия в реестре и последний тег совпадают, проверка —
-`npm view @dnikulshin/harness-viewer version`. Публикация идёт workflow `release.yml` (раздел
-[Релиз](#релиз)); пока в реестре нет ни одной версии, `npm view` отвечает `404`, и запуск — из
-репозитория: `node src/cli.mjs render --out viewer.html` (те же флаги).
+Пакет в npm — **0.1.1** (`npm view @dnikulshin/harness-viewer version`); версия в реестре и
+последний тег совпадают. В самом репозитории, без установки: `node src/cli.mjs render --out
+viewer.html` — те же флаги.
 
 ```bash
 npx @dnikulshin/harness-viewer render --out viewer.html
@@ -134,10 +133,18 @@ node tooling/repo-rules.mjs --protect   # применить: режим merge, 
 | версия в архиве совпадает с тегом                  | иначе по тегу ставится другой код                                                 |
 | `package.json` без `private: true`, с `bin`        | иначе `npm publish` откажет или потребителю нечем запускать команду               |
 
-Токен публикации — секрет `NPM_TOKEN` (scope `@dnikulshin`), его ставит владелец
-(`gh secret set NPM_TOKEN`); в код и логи он не попадает. Ошибочный тег не перезаписывается
-(ruleset `release-tags`, применяется `node tooling/repo-rules.mjs --protect`): публикуется
-следующая версия, а не `push --force`.
+Токен публикации — granular-токен со scope `@dnikulshin` в режиме **Read and write (publish and
+stage)** и с включённым **Bypass 2FA**: без первого registry отвечает `E_STAGE_REQUIRED`, без
+второго — `EOTP`. Оба отказа стоили по одному прогону релиза, поэтому названы здесь. Секрет ставит
+владелец (`gh secret set NPM_TOKEN`); в код и логи он не попадает.
+
+Первая опубликованная версия — **0.1.1**: тег `v0.1.0` стоит на коммите с дефектом в `release.yml`
+(`npm publish` без `./` уходил в GitHub-шорткат вместо архива, issue #6), и ruleset `release-tags`
+запрещает перезапись. Дальше публикация переезжает на trusted publishing (OIDC) без секрета —
+issue #8: в январе 2027 прямую публикацию granular-токеном отключают.
+
+Ошибочный тег не перезаписывается (ruleset `release-tags`, применяется
+`node tooling/repo-rules.mjs --protect`): публикуется следующая версия, а не `push --force`.
 
 ### Совместимость с ядром
 
