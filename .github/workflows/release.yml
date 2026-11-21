@@ -1,0 +1,74 @@
+name: Release
+
+# Публикация в npm по тегу `vX.Y.Z` (issue #3).
+#
+# Публикуется **собранный архив**, а не репозиторий: между `npm pack` и `npm publish` стоит проверка
+# состава (`tooling/check-package.mjs`) — что `files` покрывает контракт, что файл из `bin` на месте,
+# что в архиве нет `test/`, `tooling/` и фикстур артефактов и что версия в `package.json` совпадает с
+# тегом. Версию в npm перезаписать нельзя: ошибка в составе достаётся потребителю первой.
+#
+# Тег ставится на `main` после зелёного `ci.yml`; шаг «тег на коммите из main» проверяет это до
+# публикации, чтобы тег с рабочей ветки не превратился в обещание потребителю. Ruleset
+# `release-tags` (`node tooling/repo-rules.mjs --protect`) запрещает перезапись и удаление тегов
+# `v*`: ошибочный тег лечится новым тегом.
+#
+# `--provenance` (аттестация сборки) требует `id-token: write`. Токен публикации — секрет
+# `NPM_TOKEN` (scope `@dnikulshin`) и ставит его владелец; в код и логи он не попадает.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Нужна история: без неё не проверить, что коммит тега входит в `main`.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: 'https://registry.npmjs.org'
+
+      # Тег — контракт установки: по нему ставится пакет. Тег, поставленный на коммит из рабочей
+      # ветки, обещает потребителю непроверенный код, поэтому проверка стоит до сборки.
+      - name: Тег на коммите из main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "тег ${GITHUB_REF_NAME} стоит не на коммите из main — мерж релизного PR и тег после него" >&2
+            exit 1
+          fi
+
+      # `ci.yml` прогоняется и на теге, но два workflow независимы: публикация не должна ждать
+      # порядка запуска. Зависимостей нет, `npm install` не нужен — тесты это `node --test`.
+      - name: Тесты
+        run: node --test
+
+      # `--pack-destination` не создаёт каталог сам: без `mkdir` шаг падает с `enoent`.
+      - name: Сборка архива
+        run: |
+          mkdir -p dist
+          npm pack --pack-destination dist
+
+      # Тег — контракт потребителя: расхождение с `package.json` означает, что под тегом лежит
+      # другой код. Находки останавливают публикацию до записи в реестр.
+      - name: Состав архива и версия
+        run: node tooling/check-package.mjs dist/*.tgz --tag "$GITHUB_REF_NAME" --package package.json
+
+      - name: Публикация в npm
+        run: npm publish dist/*.tgz --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

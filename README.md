@@ -35,8 +35,10 @@ Read-only просмотрщик артефактов [`@dnikulshin/harness`](ht
 
 ## Установка и запуск
 
-> Пакет ещё не опубликован в npm: публикация и защита тега — issue #3. До релиза запуск из
-> репозитория: `node src/cli.mjs render --out viewer.html` (те же флаги).
+Пакет ставится из npm по тегу `vX.Y.Z`: версия в реестре и последний тег совпадают, проверка —
+`npm view @dnikulshin/harness-viewer version`. Публикация идёт workflow `release.yml` (раздел
+[Релиз](#релиз)); пока в реестре нет ни одной версии, `npm view` отвечает `404`, и запуск — из
+репозитория: `node src/cli.mjs render --out viewer.html` (те же флаги).
 
 ```bash
 npx @dnikulshin/harness-viewer render --out viewer.html
@@ -68,6 +70,9 @@ npx @dnikulshin/harness-viewer render --artifacts .pi/artifacts --out viewer.htm
    времени сборки, ни случайного порядка.
 5. **Нет рантайма агента и импорта ядра.** `dependencies`/`peerDependencies` пусты, в исходниках нет
    импортов `@dnikulshin/harness/scripts/**`, `scripts/lib/**` и Pi.
+6. **Архив готов к публикации.** `tooling/check-package.test.mjs` проверяет правила состава на
+   синтетических списках и на настоящем `npm pack`: `files` покрывает контракт, файл из `bin` на
+   месте, тестов и `tooling/` в архиве нет, версия совпадает с тегом.
 
 ## Как читать страницу
 
@@ -104,10 +109,50 @@ node tooling/repo-rules.mjs --protect   # применить: режим merge, 
 Проверка правил — `test/repo-rules.test.mjs` (`node --test`): payload правил и идемпотентность
 применения проверяются на подменённом `gh`, сеть не используется.
 
+## Релиз
+
+Публикуется **собранный архив**, а не репозиторий: `npm publish` необратим, поэтому между сборкой и
+публикацией стоит проверка состава (`tooling/check-package.mjs`).
+
+1. PR поднимает `version` в `package.json` и, если поменялось обещание потребителю, README; merge —
+   только владелец (squash).
+2. Тег `vX.Y.Z` ставится на `main` после зелёного CI: версия в `package.json` и тег совпадают.
+3. Workflow `release.yml` (push тега `v*`): проверка «тег на коммите из `main`» → `node --test` →
+   `npm pack` → `node tooling/check-package.mjs dist/*.tgz --tag "$GITHUB_REF_NAME"` →
+   `npm publish --provenance --access public`.
+4. Проверка после публикации: `npm view @dnikulshin/harness-viewer version` совпадает с тегом, а
+   `npx @dnikulshin/harness-viewer render --out viewer.html` работает в каталоге с деревом
+   `.pi/artifacts`.
+
+Что проверяется механизмом до записи в реестр (код выхода `1` останавливает публикацию):
+
+| Проверка                                          | Почему                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `files` покрывает контракт пакета                 | запись, забытая в `files`, даёт неполный архив, а версию в npm не переписать       |
+| в архиве есть `src/cli.mjs`, `README.md`, `LICENSE` | файл из `bin` и лицензия — часть обещания установки                              |
+| в архиве нет `test/`, `tooling/`, `.github/`       | потребителю не нужны чужой контракт тестов и инфраструктура репозитория           |
+| версия в архиве совпадает с тегом                  | иначе по тегу ставится другой код                                                 |
+| `package.json` без `private: true`, с `bin`        | иначе `npm publish` откажет или потребителю нечем запускать команду               |
+
+Токен публикации — секрет `NPM_TOKEN` (scope `@dnikulshin`), его ставит владелец
+(`gh secret set NPM_TOKEN`); в код и логи он не попадает. Ошибочный тег не перезаписывается
+(ruleset `release-tags`, применяется `node tooling/repo-rules.mjs --protect`): публикуется
+следующая версия, а не `push --force`.
+
+### Совместимость с ядром
+
+Просмотрщик читает артефакты по Приложению A
+[`docs/orchestrator-core.md`](https://github.com/DNikulshin/dev-harness/blob/main/docs/orchestrator-core.md)
+и не импортирует ядро. Поэтому изменение имён или обязательности полей артефактов —
+**несовместимое изменение ядра** (правила версий —
+[`docs/release.md`](https://github.com/DNikulshin/dev-harness/blob/main/docs/release.md)), и
+просмотрщик правится отдельным PR **после** него (ADR 0013, д). Незнакомое дополнительное поле
+показывается как есть: новый minor ядра релиза просмотрщика не требует.
+
 ## Разработка
 
 ```bash
-node --test        # тесты на фикстуре из двух циклов + правила репозитория
+node --test        # страница на фикстуре из двух циклов, правила репозитория, контракт архива
 ```
 
 Фикстура — `test/fixtures/artifacts/`: два цикла (`example-alpha` с эскалацией по бюджету,
