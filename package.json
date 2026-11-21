@@ -1,6 +1,6 @@
 {
   "name": "@dnikulshin/harness-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Read-only просмотрщик артефактов @dnikulshin/harness: список циклов, состояние, причина остановки, гейты, evidence, решения",
   "license": "MIT",
@@ -37,7 +37,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "release:pack": "mkdir -p dist && npm pack --pack-destination dist",
+    "release:pack": "rm -rf dist && mkdir -p dist && npm pack --pack-destination dist",
     "release:check": "node tooling/check-package.mjs",
     "repo:rules": "node tooling/repo-rules.mjs --protect",
     "repo:rules:dry": "node tooling/repo-rules.mjs --protect --dry-run"

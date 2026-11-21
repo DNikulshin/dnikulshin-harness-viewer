@@ -68,7 +68,10 @@ jobs:
       - name: Состав архива и версия
         run: node tooling/check-package.mjs dist/*.tgz --tag "$GITHUB_REF_NAME" --package package.json
 
+      # Префикс `./` обязателен: путь `dist/<архив>.tgz` без него npm разбирает как GitHub-шорткат
+      # `owner/repo` и уходит в `git ls-remote ssh://git@github.com/...` вместо публикации файла
+      # (прогон по тегу `v0.1.0` упал именно так — issue #6).
       - name: Публикация в npm
-        run: npm publish dist/*.tgz --provenance --access public
+        run: npm publish ./dist/*.tgz --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

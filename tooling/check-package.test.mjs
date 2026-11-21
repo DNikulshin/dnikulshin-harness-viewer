@@ -235,3 +235,37 @@ describe('разбор аргументов и коды ошибок', () => {
     assert.match(result.stderr, /check-package:/u);
   });
 });
+
+describe('release.yml', () => {
+  const WORKFLOW = readFileSync(join(ROOT, '.github', 'workflows', 'release.yml'), 'utf8');
+  // Комментарии в workflow обсуждают команды — сравниваем только исполняемые строки.
+  const COMMANDS = WORKFLOW.split('\n')
+    .filter((line) => !line.trim().startsWith('#'))
+    .join('\n');
+
+  test('npm publish получает ./dist/: без префикса npm уходит в GitHub-шорткат', () => {
+    const publish = COMMANDS.split('\n').filter((line) => line.includes('npm publish'));
+
+    assert.equal(publish.length, 1, 'ожидается ровно одна команда npm publish');
+    assert.match(
+      publish[0] ?? '',
+      /npm publish \.\/dist\/\*\.tgz/u,
+      'путь без ./ npm разбирает как owner/repo и делает git ls-remote (issue #6)',
+    );
+  });
+
+  test('проверка состава стоит до публикации и сверяет версию с тегом', () => {
+    const checkIndex = COMMANDS.indexOf('tooling/check-package.mjs');
+    const publishIndex = COMMANDS.indexOf('npm publish');
+
+    assert.ok(checkIndex > 0, 'в workflow нет шага проверки состава');
+    assert.ok(checkIndex < publishIndex, 'проверка состава должна идти до публикации');
+    assert.match(COMMANDS, /check-package\.mjs dist\/\*\.tgz --tag "\$GITHUB_REF_NAME"/u);
+  });
+
+  test('публикация с provenance: id-token и флаг на месте', () => {
+    assert.match(COMMANDS, /id-token: write/u);
+    assert.match(COMMANDS, /--provenance/u);
+    assert.match(COMMANDS, /--access public/u);
+  });
+});
